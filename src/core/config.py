@@ -29,17 +29,19 @@ TARGET_COLUMNS = [
 
 ID_COLUMN = "ID"
 
-DEFAULT_TARGET = "GDS_R2"
 DEFAULT_HIDDEN_DIM = 32
 DEFAULT_DROPOUT = 0.3
-DEFAULT_THRESHOLD = 0.5
 DEFAULT_LEARNING_RATE = 1e-3
 DEFAULT_WEIGHT_DECAY = 0.0
 DEFAULT_BATCH_SIZE = 32
-DEFAULT_EPOCHS = 20
+DEFAULT_THRESHOLD = 0.5
+DEFAULT_EPOCHS = 50
 DEFAULT_OUTER_FOLDS = 5
 DEFAULT_INNER_FOLDS = 3
 DEFAULT_RANDOM_SEED = 42
+
+# Entorno y Hardware
+N_WORKERS = -1  # Para forzar n_jobs en sklearn/DataLoaders donde aplique
 
 # Configuraciones de Experimentos
 ACTIVATION_FUNCTIONS = ['ReLU', 'Mish']
@@ -50,5 +52,5 @@ HYPERPARAMETER_SPACE = {
     'dropout_prob': [0.2, 0.3, 0.5],
     'lr': [1e-2, 1e-3],
     'weight_decay': [0, 1e-4],
-    'batch_size': [16, 32]
+    'batch_size': [16, 32, 64]
 }

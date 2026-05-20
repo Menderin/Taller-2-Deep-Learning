@@ -11,10 +11,14 @@ from evaluation import apply_threshold, hamming_loss
 from core.config import HYPERPARAMETER_SPACE
 import random
 
-def get_device() -> torch.device:
-    """Retorna el dispositivo disponible (CUDA si hay GPU, sino CPU)."""
+def get_device() -> torch.device | list[int]:
+    """Retorna el dispositivo disponible. Si hay múltiples GPUs, se preparará para DataParallel."""
     if torch.cuda.is_available():
-        return torch.device("cuda")
+        num_gpus = torch.cuda.device_count()
+        if num_gpus > 1:
+            print(f"Detectadas {num_gpus} GPUs. Usaremos DataParallel/Multi-GPU.")
+            return list(range(num_gpus))
+        return torch.device("cuda:0")
     return torch.device("cpu")
 
 def train_model(
@@ -22,20 +26,28 @@ def train_model(
     train_loader: DataLoader,
     val_loader: DataLoader,
     pos_weights: torch.Tensor,
-    epochs: int = 20,
+    epochs: int = 50,
     lr: float = 1e-3,
     weight_decay: float = 0.0,
-    device: torch.device = None
+    device: torch.device | list[int] = None
 ) -> float:
     """
-    Entrena el modelo y retorna la pérdida de validación (usaremos la loss
-    para la selección de hiperparámetros por simplicidad y suavidad).
+    Entrena el modelo y retorna la pérdida de validación.
     """
     if device is None:
         device = get_device()
         
-    model = model.to(device)
-    pos_weights = pos_weights.to(device)
+    multi_gpu = isinstance(device, list)
+    
+    if multi_gpu:
+        active_device = torch.device(f"cuda:{device[0]}")
+        model = model.to(active_device)
+        model = nn.DataParallel(model, device_ids=device)
+        pos_weights = pos_weights.to(active_device)
+    else:
+        active_device = device
+        model = model.to(active_device)
+        pos_weights = pos_weights.to(active_device)
     
     criterion = nn.BCEWithLogitsLoss(pos_weight=pos_weights)
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
@@ -46,7 +58,7 @@ def train_model(
         model.train()
         train_loss = 0.0
         for X_batch, Y_batch in train_loader:
-            X_batch, Y_batch = X_batch.to(device), Y_batch.to(device)
+            X_batch, Y_batch = X_batch.to(active_device), Y_batch.to(active_device)
             
             optimizer.zero_grad()
             outputs = model(X_batch)
@@ -62,7 +74,7 @@ def train_model(
         val_loss = 0.0
         with torch.no_grad():
             for X_batch, Y_batch in val_loader:
-                X_batch, Y_batch = X_batch.to(device), Y_batch.to(device)
+                X_batch, Y_batch = X_batch.to(active_device), Y_batch.to(active_device)
                 outputs = model(X_batch)
                 loss = criterion(outputs, Y_batch)
                 val_loss += loss.item()

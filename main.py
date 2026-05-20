@@ -18,7 +18,8 @@ from core.config import (
     DEFAULT_INNER_FOLDS,
     DEFAULT_BATCH_SIZE,
     DEFAULT_EPOCHS,
-    ACTIVATION_FUNCTIONS
+    ACTIVATION_FUNCTIONS,
+    FEATURE_COLUMNS
 )
 from data_loader import load_dataframe, CognitiveMultiLabelDataset
 from preprocessing import (
@@ -140,8 +141,11 @@ def run_experiment(dataframe: pd.DataFrame, target_name: str, activation_name: s
         all_std_probs = []
         uncertainty_variances = []
         
+        # Adaptar para MultiGPU inferencia
+        active_device = torch.device(f"cuda:{device[0]}") if isinstance(device, list) else device
+        
         for X_batch, Y_batch in test_loader:
-            X_batch = X_batch.to(device)
+            X_batch = X_batch.to(active_device)
             Y_batch = Y_batch.cpu().numpy()
             
             # Estimación de Incertidumbre usando MC Dropout (N=30)
@@ -230,7 +234,6 @@ def main():
         print(f"¡ADVERTENCIA CRÍTICA! No se encontró ni {proc_data_path} ni {raw_data_path}.")
         print("Generando Dummy Dataset binario para demostración (Solo para propósitos de Testing).")
         proc_data_path.parent.mkdir(parents=True, exist_ok=True)
-        from core.config import FEATURE_COLUMNS, TARGET_COLUMNS
         dummy_df = pd.DataFrame(np.random.choice([0, 1], size=(200, len(FEATURE_COLUMNS))), columns=FEATURE_COLUMNS)
         for t in TARGET_COLUMNS:
             dummy_df[t] = np.random.randint(0, 3, size=200) # Ej: Clases 0, 1, 2
