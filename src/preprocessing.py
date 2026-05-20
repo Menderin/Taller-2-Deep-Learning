@@ -4,7 +4,7 @@ import numpy as np
 import pandas as pd
 from sklearn.model_selection import StratifiedKFold
 
-from config import TARGET_COLUMNS
+from core.config import TARGET_COLUMNS
 from data_loader import build_input_matrix
 from sklearn.preprocessing import StandardScaler
 from sklearn.impute import SimpleImputer

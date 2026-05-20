@@ -7,7 +7,7 @@ import pandas as pd
 import torch
 from torch.utils.data import Dataset
 
-from config import FEATURE_COLUMNS, TARGET_COLUMNS, ID_COLUMN
+from core.config import FEATURE_COLUMNS, TARGET_COLUMNS, ID_COLUMN
 
 def prepare_sav_to_csv(sav_path: str | Path, output_csv_path: str | Path) -> pd.DataFrame:
     """
