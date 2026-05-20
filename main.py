@@ -58,7 +58,7 @@ def run_experiment(dataframe: pd.DataFrame, target_name: str, activation_name: s
     plot_class_distribution(Y, target_name, classes, output_dir=str(target_dir))
     
     # 2. Partición Externa (Outer Folds para Evaluación)
-    outer_splits = build_nested_splits(Y, n_splits=DEFAULT_OUTER_FOLDS)
+    outer_splits = build_nested_splits(Y, n_splits=DEFAULT_OUTER_FOLDS, target_name=target_name)
     
     experiment_results = {
         'hamming_loss': [],
@@ -80,7 +80,7 @@ def run_experiment(dataframe: pd.DataFrame, target_name: str, activation_name: s
         pos_weights = compute_class_weights(Y_train_outer)
         
         # 4. Partición Interna (Inner Folds para Búsqueda de Hiperparámetros)
-        inner_splits = build_nested_splits(Y_train_outer, n_splits=DEFAULT_INNER_FOLDS)
+        inner_splits = build_nested_splits(Y_train_outer, n_splits=DEFAULT_INNER_FOLDS, target_name=f"{target_name} (Inner)")
         
         print("Realizando Búsqueda de Hiperparámetros (Random Search)...")
         best_params = tune_hyperparameters(

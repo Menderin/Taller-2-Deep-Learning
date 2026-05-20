@@ -2,7 +2,7 @@
 
 import numpy as np
 import pandas as pd
-from sklearn.model_selection import StratifiedKFold
+from sklearn.model_selection import StratifiedKFold, KFold
 
 from core.config import TARGET_COLUMNS
 from data_loader import build_input_matrix
@@ -86,11 +86,11 @@ def impute_and_scale_features(X_train: np.ndarray, X_val: np.ndarray, X_test: np
 
 
 def split_for_validation(
-    Y: np.ndarray, n_splits: int, random_state: int = 42
+    Y: np.ndarray, n_splits: int, random_state: int = 42, target_name: str = "Target"
 ) -> list[tuple[np.ndarray, np.ndarray]]:
     """API publica para crear folds estratificados del laboratorio."""
 
-    return build_nested_splits(Y, n_splits=n_splits, random_state=random_state)
+    return build_nested_splits(Y, n_splits=n_splits, random_state=random_state, target_name=target_name)
 
 
 def build_stratification_labels(Y: np.ndarray) -> np.ndarray:
@@ -118,7 +118,7 @@ def build_stratification_labels(Y: np.ndarray) -> np.ndarray:
 
 
 def build_nested_splits(
-    Y: np.ndarray, n_splits: int, random_state: int = 42
+    Y: np.ndarray, n_splits: int, random_state: int = 42, target_name: str = "Target"
 ) -> list[tuple[np.ndarray, np.ndarray]]:
     """
     Genera folds estratificados para la validacion del laboratorio.
@@ -136,11 +136,11 @@ def build_nested_splits(
         )
 
     if counts.min() < n_splits:
-        raise ValueError(
-            "No se puede crear una validacion estratificada con "
-            f"{n_splits} folds porque la clase menos frecuente solo tiene "
-            f"{counts.min()} muestras."
-        )
+        print(f"[{target_name}] ADVERTENCIA: La clase menos frecuente solo tiene {counts.min()} muestras. "
+              f"Se usará KFold estándar (sin estratificar) para {n_splits} splits para evitar fallos.")
+        splitter = KFold(n_splits=n_splits, shuffle=True, random_state=random_state)
+        dummy_inputs = np.zeros(len(labels), dtype=np.float32)
+        return list(splitter.split(dummy_inputs))
 
     splitter = StratifiedKFold(
         n_splits=n_splits, shuffle=True, random_state=random_state
