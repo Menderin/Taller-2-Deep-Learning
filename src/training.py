@@ -10,6 +10,7 @@ from models.network import ShallowCognitiveNet
 from evaluation import apply_threshold, hamming_loss
 from core.config import HYPERPARAMETER_SPACE
 import random
+from tqdm import tqdm
 
 def get_device() -> torch.device | list[int]:
     """Retorna el dispositivo disponible. Si hay múltiples GPUs, se preparará para DataParallel."""
@@ -54,7 +55,7 @@ def train_model(
     
     best_val_loss = float('inf')
     
-    for epoch in range(epochs):
+    for epoch in tqdm(range(epochs), desc=f"Entrenando", leave=False):
         model.train()
         train_loss = 0.0
         for X_batch, Y_batch in train_loader:
@@ -119,7 +120,8 @@ def tune_hyperparameters(
     
     from data_loader import CognitiveMultiLabelDataset
     
-    for params in hyperparameter_combinations:
+    print(f"Probando {len(hyperparameter_combinations)} combinaciones...")
+    for i, params in enumerate(tqdm(hyperparameter_combinations, desc="Random Search Iterations")):
         fold_losses = []
         
         for train_idx, val_idx in inner_splits:
