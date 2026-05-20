@@ -1,0 +1,21 @@
+name: lab02-dl
+channels:
+  - pytorch
+  - nvidia
+  - conda-forge
+  - defaults
+dependencies:
+  - python=3.10
+  - pip
+  - numpy
+  - pandas
+  - scikit-learn
+  # PyTorch para CUDA 12.4 según tus especificaciones (servidor con RTX A5000)
+  - pytorch
+  - torchvision
+  - torchaudio
+  - pytorch-cuda=12.4
+  - pip:
+    - pyreadstat  # Para leer los archivos .sav
+    - matplotlib
+    - seaborn
