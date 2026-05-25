@@ -266,22 +266,18 @@ def main():
     # Exportar como JSON plano
     results_df.to_json("results/comparison_summary.json", orient="records", indent=4)
     
-    # Generar tabla Markdown (Formato plano alineado a la rúbrica del laboratorio)
-    md_columns = ['target', 'activation', 'f1_macro', 'f1_micro', 'hamming_loss']
-    if all(c in results_df.columns for c in md_columns):
-        md_df = results_df[md_columns].copy()
-        md_df.rename(columns={
-            'target': 'Etiqueta', 
-            'activation': 'Activación', 
-            'f1_macro': 'F1 Macro', 
-            'f1_micro': 'F1 Micro', 
-            'hamming_loss': 'Hamming Loss'
-        }, inplace=True)
-        # Añadir columna vacía de observación para que el alumno la llene
-        md_df['Observación'] = "..." 
-        with open("results/tabla_comparacion.md", "w", encoding="utf-8") as f:
-            f.write("## Tabla Comparativa de Experimentos\n\n")
-            f.write(md_df.to_markdown(index=False))
+    # Generar tabla Markdown (Formato plano alineado a la rúbrica del laboratorio)sin depender de tabulate
+    with open("results/tabla_comparacion.md", "w", encoding="utf-8") as f:
+        f.write("## Tabla Comparativa de Experimentos\n\n")
+        f.write("| Etiqueta | Activación | F1 Macro | F1 Micro | Hamming Loss | Observación |\n")
+        f.write("|----------|------------|----------|----------|--------------|-------------|\n")
+        for row in all_summaries:
+            target = row.get('target', '')
+            act = row.get('activation', '')
+            f1_mac = f"{row.get('f1_macro', 0):.4f}"
+            f1_mic = f"{row.get('f1_micro', 0):.4f}"
+            hl = f"{row.get('hamming_loss', 0):.4f}"
+            f.write(f"| {target} | {act} | {f1_mac} | {f1_mic} | {hl} | ... |\n")
             
     print("\n¡Ejecución completada! Resultados guardados en 'results/' (CSV, JSON plano y Markdown).")
 
