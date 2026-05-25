@@ -108,9 +108,10 @@ def run_experiment(dataframe: pd.DataFrame, target_name: str, activation_name: s
         train_dataset = CognitiveMultiLabelDataset(X_train_scaled, Y_train_outer)
         test_dataset = CognitiveMultiLabelDataset(X_test_scaled, Y_test)
         
-        train_loader = DataLoader(train_dataset, batch_size=best_params['batch_size'], shuffle=True)
+        n_workers = os.cpu_count() // 2 # Dejamos margen
+        train_loader = DataLoader(train_dataset, batch_size=best_params['batch_size'], shuffle=True, num_workers=n_workers, pin_memory=True)
         # Para inferencia no mezclamos
-        test_loader = DataLoader(test_dataset, batch_size=best_params['batch_size'], shuffle=False)
+        test_loader = DataLoader(test_dataset, batch_size=best_params['batch_size'], shuffle=False, num_workers=n_workers, pin_memory=True)
         
         # 6. Entrenar el Mejor Modelo Final sobre todo el Outer Fold
         model = ShallowCognitiveNet(
@@ -123,7 +124,7 @@ def run_experiment(dataframe: pd.DataFrame, target_name: str, activation_name: s
         
         device = get_device()
         
-        train_model(
+        _, model = train_model(
             model=model,
             train_loader=train_loader,
             val_loader=test_loader,  # Usamos test como validación para que el loop funcione, pero evaluamos después
@@ -135,6 +136,8 @@ def run_experiment(dataframe: pd.DataFrame, target_name: str, activation_name: s
         )
         
         # 7. Evaluación con Métricas y Monte Carlo Dropout
+        model.eval() # Aseguramos modo evaluación base
+        model = model.to(device if not isinstance(device, list) else torch.device(f"cuda:{device[0]}"))
         all_y_true = []
         all_y_pred = []
         all_mean_probs = []

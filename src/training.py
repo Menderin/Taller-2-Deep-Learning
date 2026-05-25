@@ -30,10 +30,11 @@ def train_model(
     epochs: int = 50,
     lr: float = 1e-3,
     weight_decay: float = 0.0,
-    device: torch.device | list[int] = None
-) -> float:
+    device: torch.device | list[int] = None,
+    silent: bool = False
+) -> tuple[float, nn.Module]:
     """
-    Entrena el modelo y retorna la pérdida de validación.
+    Entrena el modelo y retorna la pérdida de validación y el modelo.
     """
     if device is None:
         device = get_device()
@@ -55,7 +56,8 @@ def train_model(
     
     best_val_loss = float('inf')
     
-    for epoch in tqdm(range(epochs), desc=f"Entrenando", leave=False):
+    iterator = range(epochs) if silent else tqdm(range(epochs), desc=f"Entrenando", leave=False)
+    for epoch in iterator:
         model.train()
         train_loss = 0.0
         for X_batch, Y_batch in train_loader:
@@ -85,7 +87,62 @@ def train_model(
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             
-    return best_val_loss
+    # Extraer el módulo interno si usamos DataParallel
+    if multi_gpu:
+        model = model.module
+            
+    return best_val_loss, model
+
+def _evaluate_hyperparameter(params, X_train_inner, Y_train_inner, inner_splits, pos_weights_np, input_dim, num_classes, epochs, activation_name):
+    """Función auxiliar para evaluar una combinación de hiperparámetros de manera paralela."""
+    import torch
+    import numpy as np
+    from torch.utils.data import DataLoader
+    from data_loader import CognitiveMultiLabelDataset
+    from models.network import ShallowCognitiveNet
+    from preprocessing import impute_and_scale_features
+    # Forzamos CPU para las evaluaciones paralelas internas
+    device = torch.device('cpu') 
+    pos_weights = torch.tensor(pos_weights_np, dtype=torch.float32)
+    
+    fold_losses = []
+    
+    for train_idx, val_idx in inner_splits:
+        X_t, Y_t = X_train_inner[train_idx], Y_train_inner[train_idx]
+        X_v, Y_v = X_train_inner[val_idx], Y_train_inner[val_idx]
+        
+        # Imputar NaNs y escalar internamente para evitar leakage en inner folds
+        X_t_scaled, X_v_scaled = impute_and_scale_features(X_t, X_v)
+        
+        train_dataset = CognitiveMultiLabelDataset(X_t_scaled, Y_t)
+        val_dataset = CognitiveMultiLabelDataset(X_v_scaled, Y_v)
+        
+        # Uso de workers no es necesario acá ya que la RAM ya tiene los tensores en CPU
+        train_loader = DataLoader(train_dataset, batch_size=params['batch_size'], shuffle=True)
+        val_loader = DataLoader(val_dataset, batch_size=params['batch_size'], shuffle=False)
+        
+        model = ShallowCognitiveNet(
+            input_dim=input_dim, 
+            num_classes=num_classes, 
+            hidden_dim=params['hidden_dim'],
+            dropout_prob=params['dropout_prob'],
+            activation_name=activation_name
+        )
+        
+        val_loss, _ = train_model(
+            model=model,
+            train_loader=train_loader,
+            val_loader=val_loader,
+            pos_weights=pos_weights,
+            epochs=epochs,
+            lr=params['lr'],
+            weight_decay=params['weight_decay'],
+            device=device,
+            silent=True
+        )
+        fold_losses.append(val_loss)
+        
+    return np.mean(fold_losses)
 
 def tune_hyperparameters(
     X_train_inner: np.ndarray,
@@ -120,47 +177,25 @@ def tune_hyperparameters(
     
     from data_loader import CognitiveMultiLabelDataset
     
-    print(f"Probando {len(hyperparameter_combinations)} combinaciones...")
-    for i, params in enumerate(tqdm(hyperparameter_combinations, desc="Random Search Iterations")):
-        fold_losses = []
-        
-        for train_idx, val_idx in inner_splits:
-            X_t, Y_t = X_train_inner[train_idx], Y_train_inner[train_idx]
-            X_v, Y_v = X_train_inner[val_idx], Y_train_inner[val_idx]
-            
-            # Imputar NaNs y escalar internamente para evitar leakage en inner folds
-            from preprocessing import impute_and_scale_features
-            X_t_scaled, X_v_scaled = impute_and_scale_features(X_t, X_v)
-            
-            train_dataset = CognitiveMultiLabelDataset(X_t_scaled, Y_t)
-            val_dataset = CognitiveMultiLabelDataset(X_v_scaled, Y_v)
-            
-            train_loader = DataLoader(train_dataset, batch_size=params['batch_size'], shuffle=True)
-            val_loader = DataLoader(val_dataset, batch_size=params['batch_size'], shuffle=False)
-            
-            model = ShallowCognitiveNet(
-                input_dim=input_dim, 
-                num_classes=num_classes, 
-                hidden_dim=params['hidden_dim'],
-                dropout_prob=params['dropout_prob'],
-                activation_name=activation_name
-            )
-            
-            val_loss = train_model(
-                model=model,
-                train_loader=train_loader,
-                val_loader=val_loader,
-                pos_weights=pos_weights,
-                epochs=epochs,
-                lr=params['lr'],
-                weight_decay=params['weight_decay'],
-                device=device
-            )
-            fold_losses.append(val_loss)
-            
-        avg_loss = np.mean(fold_losses)
-        if avg_loss < best_avg_loss:
-            best_avg_loss = avg_loss
-            best_params = params
-            
+    print(f"Probando {len(hyperparameter_combinations)} combinaciones en paralelo (Random Search)...")
+    
+    from joblib import Parallel, delayed
+    import os
+    
+    # Paralelizamos usando todos los hilos disponibles
+    n_jobs = os.cpu_count()
+    
+    results = Parallel(n_jobs=n_jobs)(
+        delayed(_evaluate_hyperparameter)(
+            params, X_train_inner, Y_train_inner, inner_splits, 
+            pos_weights_np, input_dim, num_classes, epochs, activation_name
+        ) for params in tqdm(hyperparameter_combinations, desc="Lanzando Workers")
+    )
+    
+    # Encontrar la mejor combinación
+    best_idx = np.argmin(results)
+    best_avg_loss = results[best_idx]
+    best_params = hyperparameter_combinations[best_idx]
+    
+    print(f"Mejor Avg Loss Interna: {best_avg_loss:.4f} con {best_params}")
     return best_params
