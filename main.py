@@ -39,7 +39,7 @@ from evaluation import (
     recall_multilabel
 )
 from uncertainty import mc_dropout_predict
-from visualization import plot_class_distribution, plot_scaling_comparison, plot_uncertainty_distribution, plot_uncertainty_vs_probability
+from visualization import plot_class_distribution, plot_scaling_comparison, plot_uncertainty_distribution, plot_uncertainty_vs_probability, plot_learning_curves
 
 def run_experiment(dataframe: pd.DataFrame, target_name: str, activation_name: str = 'Mish') -> dict:
     """Ejecuta el experimento completo (Nested CV) para un target específico."""
@@ -124,7 +124,7 @@ def run_experiment(dataframe: pd.DataFrame, target_name: str, activation_name: s
         
         device = get_device()
         
-        _, model = train_model(
+        _, model, history = train_model(
             model=model,
             train_loader=train_loader,
             val_loader=test_loader,  # Usamos test como validación para que el loop funcione, pero evaluamos después
@@ -134,6 +134,9 @@ def run_experiment(dataframe: pd.DataFrame, target_name: str, activation_name: s
             weight_decay=best_params['weight_decay'],
             device=device
         )
+        
+        # Visualización de las curvas de aprendizaje para este modelo final
+        plot_learning_curves(history, target_name, activation_name, output_dir=str(target_dir))
         
         # 7. Evaluación con Métricas y Monte Carlo Dropout
         model.eval() # Aseguramos modo evaluación base

@@ -96,3 +96,26 @@ def plot_uncertainty_vs_probability(mean_probs: np.ndarray, std_probs: np.ndarra
     plt.tight_layout()
     plt.savefig(f"{output_dir}/mc_dropout_prob_vs_std_{target_name}.png", dpi=300)
     plt.close()
+
+def plot_learning_curves(history: dict, target_name: str, activation_name: str, output_dir: str = "results/plots"):
+    """
+    Genera el gráfico de Curvas de Aprendizaje (Loss) por épocas.
+    Visualiza si el modelo está convergiendo bien o si está sufriendo de overfitting.
+    """
+    Path(output_dir).mkdir(parents=True, exist_ok=True)
+    
+    epochs = range(1, len(history['train_loss']) + 1)
+    
+    plt.figure(figsize=(8, 5))
+    plt.plot(epochs, history['train_loss'], label='Train Loss', color='blue', linewidth=2)
+    plt.plot(epochs, history['val_loss'], label='Validation/Test Loss', color='orange', linewidth=2, linestyle='--')
+    
+    plt.title(f"Curva de Aprendizaje | {target_name} | {activation_name}")
+    plt.xlabel("Épocas (Epochs)")
+    plt.ylabel("BCE Loss (Log-Loss)")
+    plt.legend()
+    plt.grid(True, linestyle=':', alpha=0.6)
+    
+    plt.tight_layout()
+    plt.savefig(f"{output_dir}/learning_curve_{target_name}.png", dpi=300)
+    plt.close()

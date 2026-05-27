@@ -55,6 +55,7 @@ def train_model(
     optimizer = torch.optim.Adam(model.parameters(), lr=lr, weight_decay=weight_decay)
     
     best_val_loss = float('inf')
+    history = {'train_loss': [], 'val_loss': []}
     
     iterator = range(epochs) if silent else tqdm(range(epochs), desc=f"Entrenando", leave=False)
     for epoch in iterator:
@@ -72,6 +73,8 @@ def train_model(
             
             train_loss += loss.item()
             
+        train_loss /= len(train_loader)
+            
         # Validación
         model.eval()
         val_loss = 0.0
@@ -84,6 +87,9 @@ def train_model(
                 
         val_loss /= len(val_loader)
         
+        history['train_loss'].append(train_loss)
+        history['val_loss'].append(val_loss)
+        
         if val_loss < best_val_loss:
             best_val_loss = val_loss
             
@@ -91,7 +97,7 @@ def train_model(
     if multi_gpu:
         model = model.module
             
-    return best_val_loss, model
+    return best_val_loss, model, history
 
 def _evaluate_hyperparameter(params, X_train_inner, Y_train_inner, inner_splits, pos_weights_np, input_dim, num_classes, epochs, activation_name):
     """Función auxiliar para evaluar una combinación de hiperparámetros de manera paralela."""
@@ -133,7 +139,7 @@ def _evaluate_hyperparameter(params, X_train_inner, Y_train_inner, inner_splits,
             activation_name=activation_name
         )
         
-        val_loss, _ = train_model(
+        val_loss, _, _ = train_model(
             model=model,
             train_loader=train_loader,
             val_loader=val_loader,
