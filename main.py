@@ -3,7 +3,7 @@
 import sys
 from pathlib import Path
 import os
-import json
+import random
 import torch
 import numpy as np
 import pandas as pd
@@ -19,8 +19,20 @@ from core.config import (
     DEFAULT_BATCH_SIZE,
     DEFAULT_EPOCHS,
     ACTIVATION_FUNCTIONS,
-    FEATURE_COLUMNS
+    FEATURE_COLUMNS,
+    DEFAULT_RANDOM_SEED
 )
+
+def set_universal_seed(seed: int = 42):
+    """Establece la semilla para TODAS las librerías estocásticas, garantizando reproducibilidad."""
+    random.seed(seed)
+    os.environ['PYTHONHASHSEED'] = str(seed)
+    np.random.seed(seed)
+    torch.manual_seed(seed)
+    torch.cuda.manual_seed(seed)
+    torch.cuda.manual_seed_all(seed) # para multi-GPU.
+    torch.backends.cudnn.deterministic = True
+    torch.backends.cudnn.benchmark = False
 from data_loader import load_dataframe, CognitiveMultiLabelDataset
 from preprocessing import (
     prepare_experiment_data,
@@ -217,6 +229,11 @@ def run_experiment(dataframe: pd.DataFrame, target_name: str, activation_name: s
 
 def main():
     print("Iniciando Pipeline de Laboratorio 02 - Deep Learning")
+    
+    # Fijar Semillas Globales para Reproducibilidad
+    set_universal_seed(DEFAULT_RANDOM_SEED)
+    print(f"Semilla universal fijada en: {DEFAULT_RANDOM_SEED} (Garantiza reproducibilidad de pesos e hiperparámetros)")
+    
     device = get_device()
     print(f"Dispositivo activo: {device}")
     
