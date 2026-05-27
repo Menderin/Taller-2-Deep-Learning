@@ -29,3 +29,7 @@ Comparación sistemática de resultados entre los seis experimentos.
 Reglas de Interacción:
 Cuando escribas código, mantén la arquitectura modular actual y prioriza la legibilidad; el código debe ser fácil de explicar en una clase.
  enfocate en crear los archivos necesarios usando impplementacion con tensores, ya que correra en servidor (2 rtx a5000 cuda V 12.4 )
+
+**Reglas Críticas de Concurrencia (Evitar Colapso del Servidor):**
+- **Num Workers (DataLoaders):** Nunca escalar `num_workers` al tamaño de la CPU. Utilizar un máximo seguro (ej. 4) para evitar sobrecargar la RAM central y la memoria compartida (`/dev/shm`).
+- **Explosión de Hilos (Joblib + CPU):** Siempre que se corran validaciones (como Random Search en Folds Internos) paralelizadas en CPU, agregar obligatoriamente `torch.set_num_threads(1)` al inicio de las funciones que corren dentro de los workers (ej. la de joblib) para prevenir que Pytorch acapare miles de hilos causando un congelamiento sistémico. Limita también sabiamente la variable max `n_jobs`.

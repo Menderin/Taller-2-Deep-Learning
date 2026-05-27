@@ -108,7 +108,7 @@ def run_experiment(dataframe: pd.DataFrame, target_name: str, activation_name: s
         train_dataset = CognitiveMultiLabelDataset(X_train_scaled, Y_train_outer)
         test_dataset = CognitiveMultiLabelDataset(X_test_scaled, Y_test)
         
-        n_workers = os.cpu_count() // 2 # Dejamos margen
+        n_workers = min(4, os.cpu_count() or 1) # Limitado a max 4 para evitar colapso de RAM/shm en el servidor
         train_loader = DataLoader(train_dataset, batch_size=best_params['batch_size'], shuffle=True, num_workers=n_workers, pin_memory=True)
         # Para inferencia no mezclamos
         test_loader = DataLoader(test_dataset, batch_size=best_params['batch_size'], shuffle=False, num_workers=n_workers, pin_memory=True)

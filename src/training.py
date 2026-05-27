@@ -96,6 +96,10 @@ def train_model(
 def _evaluate_hyperparameter(params, X_train_inner, Y_train_inner, inner_splits, pos_weights_np, input_dim, num_classes, epochs, activation_name):
     """Función auxiliar para evaluar una combinación de hiperparámetros de manera paralela."""
     import torch
+    
+    # CRÍTICO: Prevenir la explosión de hilos cuando usamos joblib.Parallel
+    torch.set_num_threads(1)
+    
     import numpy as np
     from torch.utils.data import DataLoader
     from data_loader import CognitiveMultiLabelDataset
@@ -182,8 +186,8 @@ def tune_hyperparameters(
     from joblib import Parallel, delayed
     import os
     
-    # Paralelizamos usando todos los hilos disponibles
-    n_jobs = os.cpu_count()
+    # Paralelizamos limitando la cantidad de procesos para no acaparar en exceso el servidor
+    n_jobs = min(16, os.cpu_count() or 1)
     
     results = Parallel(n_jobs=n_jobs)(
         delayed(_evaluate_hyperparameter)(

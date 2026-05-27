@@ -2,7 +2,7 @@
 
 **Modelos en PyTorch para la Predicción del Deterioro Cognitivo**
 *Deep Learning — Universidad Católica del Norte*
-*Prof. Dr. Juan Bekios Calfa | Publicación: 14/04/2026 | Entrega: 13/05/2026*
+*Prof. Dr. Juan Bekios Calfa*
 
 ---
 
