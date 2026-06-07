@@ -171,7 +171,7 @@ Una dispersión alta entre pasadas indica mayor duda del modelo sobre esa etique
 ### Requisitos
 
 ```bash
-conda env create -f src/core/environment.yml
+conda env create -f src/core/enviroment.yml
 conda activate lab02-dl
 ```
 
