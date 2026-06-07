@@ -78,15 +78,27 @@ Taller-2-Deep-Learning/
 │   └── processed/            # CSV limpio (auto-generado por la pipeline)
 ├── docs/                     # Diapositivas y material teórico del laboratorio
 ├── results/                  # Resultados por activación y target
-│   └── <Activación>/
-│       └── <Target>/
-│           ├── best_model_fold_N.pth
-│           ├── class_distribution.png
-│           ├── scaling_comparison.png
-│           ├── uncertainty_distribution.png
-│           └── uncertainty_vs_probability.png
+│   ├── Mish/
+│   │   └── <Target>/
+│   │       ├── best_model_fold_N.pth
+│   │       ├── class_distribution.png
+│   │       ├── scaling_comparison.png
+│   │       ├── uncertainty_distribution.png
+│   │       └── uncertainty_vs_probability.png
+│   ├── ReLU/
+│   │   └── <Target>/
+│   │       ├── best_model_fold_N.pth
+│   │       ├── class_distribution.png
+│   │       ├── scaling_comparison.png
+│   │       ├── uncertainty_distribution.png
+│   │       └── uncertainty_vs_probability.png
+│   ├── comparison_summary.csv
+│   ├── comparison_summary.json
+│   └── tabla_comparacion.md
 ├── src/
-│   ├── core/config.py        # Hiperparámetros base, columnas y configuración
+│   ├── core/
+│   │   ├── config.py         # Hiperparámetros base, columnas y configuración
+│   │   └── enviroment.yml    # Dependencias del entorno
 │   ├── models/network.py     # ShallowCognitiveNet (PyTorch nn.Module)
 │   ├── data_loader.py        # Carga de .sav/.csv y CognitiveMultiLabelDataset
 │   ├── preprocessing.py      # Tensores, imputación, one-hot e índices de folds
